@@ -1,7 +1,8 @@
 name: Sync Gallery and Image Tags
 description: Syncs tags between Gallery and Image entities.
 exec:
-  - syncGalleryAndImageTags.py
+  - python
+  - "{pluginDir}/syncGalleryAndImageTags.py"
 interface: raw
 
 hooks:
@@ -20,6 +21,10 @@ settings:
   excludeOrganized:
     displayName: Exclude Organized Images and Galleries
     description: Do not send tags to organized Images or Galleries.
+    type: BOOLEAN
+  demandOrganized:
+    displayName: Only Organized Images and Galleries
+    description: Only send tags from organized Images or Galleries.
     type: BOOLEAN
   excludeImageWithTag:
     displayName: Exclude Images with Tag from Hook
