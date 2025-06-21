@@ -34,15 +34,15 @@ def processGallery(galleryId):
         }
     }
     if settings['excludeOrganized']:
-        imageQuery["organized"] = False
-    if settings["excludeImageWithTag"] != "":
-        imageExclusionMarkerTag = stash.find_tag(settings["excludeImageWithTag"])
-        if imageExclusionMarkerTag is not None:
-            imageQuery["tags"] = {
-                "value": [imageExclusionMarkerTag["id"]],
-                "modifier": "EXCLUDES"
-            }
-            galleryTagIds.append(imageExclusionMarkerTag["id"])
+        imageQuery["organized"] = False # type: ignore
+    # if settings["excludeImageWithTag"] != "":
+    #     imageExclusionMarkerTag = stash.find_tag(settings["excludeImageWithTag"])
+    #     if imageExclusionMarkerTag is not None:
+    #         imageQuery["tags"] = {
+    #             "value": [imageExclusionMarkerTag["id"]],
+    #             "modifier": "EXCLUDES"
+    #         }
+    #         galleryTagIds.append(imageExclusionMarkerTag["id"])
 
     galleryImageCount = stash.find_images(f=imageQuery, filter={"page": 0, "per_page": 0}, get_count=True)[0]
 
@@ -68,7 +68,7 @@ def processGallery(galleryId):
     
 
 def processImage(id):
-    pass
+    return
 
 
 json_input = json.loads(sys.stdin.read())
