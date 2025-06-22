@@ -2,10 +2,57 @@ import stashapi.log as log
 from stashapi.stashapp import StashInterface
 import sys
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 
 def processAll():
-    pass
+
+    imageQuery = {
+        "galleries_filter": {
+            "image_count": {
+                "modifier": "NOT_EQUALS",
+                "value": 0,
+            },
+        },
+    }
+
+    if settings['demandOrganized']:
+        imageQuery["organized"] = True # type: ignore
+
+    if settings["excludeImageWithTag"] != "":
+        imageExclusionMarkerTag = stash.find_tag(settings["excludeImageWithTag"])
+        if imageExclusionMarkerTag is not None:
+            imageQuery["tags"] = { # type: ignore
+                "value": [imageExclusionMarkerTag["id"]],
+                "modifier": "EXCLUDES"
+            }
+    
+    imagesTotal = stash.find_images(f=imageQuery, filter={"page": 0, "per_page": 0}, get_count=True)[0]
+    
+    if imagesTotal > 0:
+        log.info(f"Updating {imagesTotal} images with tags from galleries")
+        workers = 16 
+        imagePageSize = 4 * workers
+        imagePage = 0
+
+        while imagePage * imagePageSize < imagesTotal:
+            log.progress((imagePage * imagePageSize / imagesTotal))
+
+
+            images = stash.find_images(f=imageQuery, filter={"page": imagePage, "per_page": imagePageSize}, fragment='id')
+            imageIds = [image['id'] for image in images]
+
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {executor.submit(processImage, imageId): imageId for imageId in imageIds}
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        log.error(f"Error processing image {futures[future]}: {e}")
+
+            log.debug(f"Processed {len(imageIds)} images on page {imagePage}")
+            imagePage += 1
 
 
 def processImage(imageId):
@@ -47,7 +94,7 @@ def processImage(imageId):
     if galleryCount > 0:
         performerIds = [performer["id"] for performer in image["performers"]]
 
-        log.info(f"Updating {galleryCount} galleries of image \"{image['title']}\" with tags {image['tags']}")
+        log.info(f"Updating {galleryCount} galleries of image \"{imageId}\" with tags {imageTagIds} and performers {performerIds}")
 
         galleryPageSize = 100
         galleryPage = 0
@@ -84,3 +131,8 @@ if "hookContext" in json_input["args"]:
     if json_input["args"]["hookContext"]["type"] in {"Image.Update.Post", "Image.Create.Post"}:
         log.info(f"Processing Image {id}")
         processImage(id)
+elif "mode" in json_input["args"]:
+    PLUGIN_ARGS = json_input["args"]["mode"]
+    if "processAll" in PLUGIN_ARGS:
+        log.info("Processing all galleries and images")
+        processAll()
