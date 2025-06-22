@@ -1,0 +1,37 @@
+name: Tag Galleries with Image Tags
+description: Tags galleries with image tags.
+exec:
+  - python
+  - "{pluginDir}/tagGalleriesWithImageTags.py"
+interface: raw
+
+hooks:
+  - name: update image
+    description: Syncs tags between Image and Gallery entities when an image is updated.
+    triggeredBy:
+      - Image.Update.Post
+      - Image.Create.Post
+
+settings:
+  excludeOrganized:
+    displayName: Exclude Organized Galleries
+    description: Do not send tags to organized galleries.
+    type: BOOLEAN
+  demandOrganized:
+    displayName: Only Organized images
+    description: Only send tags from organized images.
+    type: BOOLEAN
+  excludeImageWithTag:
+    displayName: Apply Tag to recipient Galleries
+    description: Tag will be applied automatically when a gallery is synced.
+    type: STRING
+  excludeGalleryWithTag:
+    displayName: Exclude images with Tag from Hook
+    description: Do not automatically sync tags if the image has this tag.
+    type: STRING
+
+tasks:
+  - name: "Sync All Images"
+    description: Loops through all Galleries, finds all of their images, then applies the image's tags to each of the galleries they contain. Can take a long time on large databases.
+    defaultArgs:
+      mode: processAll
