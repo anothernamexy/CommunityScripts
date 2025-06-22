@@ -13,8 +13,6 @@ def processGallery(galleryId):
     if gallery is None:
         log.error(f"Gallery with id {galleryId} not found")
         return
-    log.debug("galleryJson:")
-    log.debug(gallery)
 
     if settings["demandOrganized"] and not gallery["organized"]:
         log.info(f"Excluding gallery {galleryId} because it is not organized")
@@ -36,6 +34,11 @@ def processGallery(galleryId):
     }
     if settings['excludeOrganized']:
         imageQuery["organized"] = False # type: ignore
+    
+    if settings["excludeImageWithTag"] != "":
+        imageExclusionMarkerTag = stash.find_tag(settings["excludeImageWithTag"])
+        if imageExclusionMarkerTag is not None:
+            galleryTagIds.append(imageExclusionMarkerTag["id"])
     
     galleryImageCount = stash.find_images(f=imageQuery, filter={"page": 0, "per_page": 0}, get_count=True)[0]
 

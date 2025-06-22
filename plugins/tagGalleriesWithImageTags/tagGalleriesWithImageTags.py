@@ -3,16 +3,16 @@ from stashapi.stashapp import StashInterface
 import sys
 import json
 
+
 def processAll():
     pass
+
 
 def processImage(imageId):
     image = stash.find_image(imageId)
     if image is None:
         log.error(f"Image with id {imageId} not found")
         return
-    log.debug("imageJson:")
-    log.debug(image)
 
     if settings["demandOrganized"] and not image["organized"]:
         log.info(f"Excluding image {imageId} because it is not organized")
@@ -25,30 +25,45 @@ def processImage(imageId):
             if imageExclusionMarkerTag["id"] in imageTagIds:
                 log.info(f"Excluding image {imageId} because it has the tag {settings['excludeImageWithTag']}")
                 return
+            
+    galleryQuery = {
+        "images_filter": {
+            "id": {
+                "value": imageId,
+                "modifier": "EQUALS"
+            }
+        }
+    }
+    if settings['excludeOrganized']:
+        galleryQuery["organized"] = False # type: ignore
+    
     if settings["excludeGalleryWithTag"] != "":
         galleryExclusionMarkerTag = stash.find_tag(settings["excludeGalleryWithTag"])
         if galleryExclusionMarkerTag is not None:
             imageTagIds.append(galleryExclusionMarkerTag["id"])
 
-    performerIds = [performer["id"] for performer in image["performers"]]
+    galleryCount = stash.find_galleries(f=galleryQuery, filter={"page": 0, "per_page": 0}, get_count=True)[0]
 
-    galleryIds = []
-    for gallery in image["galleries"]:
-        if settings['excludeOrganized'] and not gallery["organized"]:
-            log.info(f"Excluding gallery {gallery['id']} because it is not organized")
-        else:
-            galleryIds.append(gallery["id"])
-    if len(galleryIds) == 0:
-        log.info(f"Excluding image {imageId} because it has no galleries")
-        return
-    log.info(f"Updating {len(galleryIds)} galleries of image \"{image['title']}\" with tags {image['tags']}")
-    stash.update_galleries(
-        {
-            "ids": galleryIds,
-            "performer_ids": {"mode": "ADD", "ids": performerIds},
-            "tag_ids": {"mode": "ADD", "ids": imageTagIds}
-        }
-    )   
+    if galleryCount > 0:
+        performerIds = [performer["id"] for performer in image["performers"]]
+
+        log.info(f"Updating {galleryCount} galleries of image \"{image['title']}\" with tags {image['tags']}")
+
+        galleryPageSize = 100
+        galleryPage = 0
+        while galleryPage * galleryPageSize < galleryCount:
+            galleries = stash.find_galleries(f=galleryQuery, filter={"page": galleryPage, "per_page": galleryPageSize}, fragment='id')
+            galleryIds = [gallery['id'] for gallery in galleries]
+
+            stash.update_galleries(
+                {
+                    "ids": galleryIds,
+                    "performer_ids": {"mode": "ADD", "ids": performerIds},
+                    "tag_ids": {"mode": "ADD", "ids": imageTagIds}
+                }
+            )
+            log.debug(f"Updated {len(galleryIds)} galleries of image {imageId}")
+            galleryPage += 1
     
 
 
@@ -63,7 +78,7 @@ settings = {
     "excludeGalleryWithTag": "",
 }
 if "tagGalleriesWithImageTags" in config["plugins"]:
-    settings.update(config["plugins"]["tagGalleriesWithImageTags"].get("settings", {}))
+    settings.update(config["plugins"]["tagGalleriesWithImageTags"])
 if "hookContext" in json_input["args"]:
     id = json_input["args"]["hookContext"]["id"]
     if json_input["args"]["hookContext"]["type"] in {"Image.Update.Post", "Image.Create.Post"}:
