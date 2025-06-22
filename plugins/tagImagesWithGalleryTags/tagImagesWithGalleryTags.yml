@@ -1,5 +1,6 @@
 name: Tag Images with Gallery Tags
-description: Tags images with gallery tags.
+description: Tags images with gallery tags. Consider deactivating plugins that use the Image.Update.Post hook to avoid conflicts and performance issues.
+version: 1.0.0
 exec:
   - python
   - "{pluginDir}/tagImagesWithGalleryTags.py"

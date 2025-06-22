@@ -5,7 +5,39 @@ import json
 
 
 def processAll():
-    pass
+    
+    galleryQuery = {
+        "image_count": {
+            "modifier": "NOT_EQUALS",
+            "value": 0,
+        },
+    }
+
+    if settings['demandOrganized']:
+        galleryQuery["organized"] = True  # type: ignore
+
+    if settings["excludeGalleryWithTag"] != "":
+        galleryExclusionMarkerTag = stash.find_tag(settings["excludeGalleryWithTag"])
+        if galleryExclusionMarkerTag is not None:
+            galleryQuery["tags"] = {
+                "value": [galleryExclusionMarkerTag["id"]],
+                "modifier": "EXCLUDES"
+            }
+    
+    galleriesTotal = stash.find_galleries(f=galleryQuery, filter={"page": 0, "per_page": 0}, get_count=True)[0]
+    i = 0
+    while i < galleriesTotal:
+        log.progress((i / galleriesTotal))
+
+        gallery = stash.find_galleries(f=galleryQuery, filter={"page": i, "per_page": 1})
+
+        galleryId = gallery[0]["id"]
+        log.info(f"Processing gallery {galleryId}")
+
+        processGallery(galleryId)
+
+        i += 1
+    
 
 
 def processGallery(galleryId):
