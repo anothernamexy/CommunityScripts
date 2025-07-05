@@ -2,6 +2,7 @@ import stashapi.log as log
 from stashapi.stashapp import StashInterface
 import sys
 import json
+import math
 
 
 def processAll():
@@ -77,11 +78,12 @@ def processGallery(galleryId):
     if galleryImageCount > 0:
         galleryPerformerIds = [performer["id"] for performer in gallery["performers"]]
 
-        log.info(f"Updating {galleryImageCount} images of gallery \"{gallery['title']}\" with tags {gallery['tags']}")
+        log.info(f"Updating {galleryImageCount} images of gallery \"{galleryId}\" with tags {galleryTagIds} and performers {galleryPerformerIds}")
 
         galleryImagePageSize = 100
         galleryImagePage = 0
-        while galleryImagePage * galleryImagePageSize < galleryImageCount:
+        totalPages = math.ceil(galleryImageCount / galleryImagePageSize)
+        while galleryImagePage <= totalPages:
             galleryImages = stash.find_images(f=imageQuery, filter={"page": galleryImagePage, "per_page": galleryImagePageSize}, fragment='id')
             galleryImageIds = [gallery_image['id'] for gallery_image in galleryImages]
             stash.update_images(
@@ -91,7 +93,7 @@ def processGallery(galleryId):
                     "tag_ids": {"mode": "ADD", "ids": galleryTagIds}
                 }
             )
-            log.debug(f"Updated {len(galleryImageIds)} images of gallery {galleryId}")
+            log.debug(f"Updated {galleryImageIds} images of gallery {galleryId}")
             galleryImagePage += 1
 
 
@@ -108,12 +110,11 @@ settings = {
 if "tagImagesWithGalleryTags" in config["plugins"]:
     settings.update(config["plugins"]["tagImagesWithGalleryTags"])
 if "hookContext" in json_input["args"]:
-    id = json_input["args"]["hookContext"]["id"]
     if json_input["args"]["hookContext"]["type"] in {"Gallery.Update.Post", "Gallery.Create.Post"}:
+        id = json_input["args"]["hookContext"]["id"]
         log.info(f"Processing gallery {id}")
         processGallery(id)
 elif "mode" in json_input["args"]:
-    PLUGIN_ARGS = json_input["args"]["mode"]
-    if "processAll" in PLUGIN_ARGS:
+    if "processAll" in json_input["args"]["mode"]:
         log.info("Processing all galleries and images")
         processAll()

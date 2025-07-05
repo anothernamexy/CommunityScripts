@@ -2,7 +2,7 @@ CREATE_MARKERS = True
 FRAME_INTERVAL = 2
 IMAGE_THRESHOLD = 0.5
 
-API_BASE_URL = 'http://localhost:8000'
+API_BASE_URL = 'http://192.168.178.117:8000'
 IMAGE_REQUEST_BATCH_SIZE = 320
 CONCURRENT_TASK_LIMIT = 10
 SERVER_TIMEOUT = 3700
@@ -19,4 +19,4 @@ aierrored_tag_name = "AI_Errored"
 
 # Example for mutating paths
 # path_mutation = {"E:": "F:", "G:": "D:"}
-path_mutation = {}
+path_mutation = {"/data":"/mnt/unraid/data", "/misc-media":"/mnt/unraid/misc-media"}

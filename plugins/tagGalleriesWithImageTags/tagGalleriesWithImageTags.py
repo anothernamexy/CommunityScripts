@@ -2,6 +2,7 @@ import stashapi.log as log
 from stashapi.stashapp import StashInterface
 import sys
 import json
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -98,7 +99,8 @@ def processImage(imageId):
 
         galleryPageSize = 100
         galleryPage = 0
-        while galleryPage * galleryPageSize < galleryCount:
+        totalPages = math.ceil(galleryCount / galleryPageSize)
+        while galleryPage <= totalPages:
             galleries = stash.find_galleries(f=galleryQuery, filter={"page": galleryPage, "per_page": galleryPageSize}, fragment='id')
             galleryIds = [gallery['id'] for gallery in galleries]
 
@@ -127,12 +129,11 @@ settings = {
 if "tagGalleriesWithImageTags" in config["plugins"]:
     settings.update(config["plugins"]["tagGalleriesWithImageTags"])
 if "hookContext" in json_input["args"]:
-    id = json_input["args"]["hookContext"]["id"]
     if json_input["args"]["hookContext"]["type"] in {"Image.Update.Post", "Image.Create.Post"}:
+        id = json_input["args"]["hookContext"]["id"]
         log.info(f"Processing Image {id}")
         processImage(id)
 elif "mode" in json_input["args"]:
-    PLUGIN_ARGS = json_input["args"]["mode"]
-    if "processAll" in PLUGIN_ARGS:
+    if "processAll" in json_input["args"]["mode"]:
         log.info("Processing all galleries and images")
         processAll()
